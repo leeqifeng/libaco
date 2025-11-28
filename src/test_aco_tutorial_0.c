@@ -59,38 +59,40 @@ int main() {
 #endif
     // Initialize the aco environment in the current thread.
     aco_thread_init(NULL);
-
-    // Create a main coroutine whose "share stack" is the default stack 
-    // of the current thread. And it doesn't need any private save stack 
-    // since it is definitely a standalone coroutine (which coroutine 
+    printf("=====================================%d==\n", __LINE__);
+    // Create a main coroutine whose "share stack" is the default stack
+    // of the current thread. And it doesn't need any private save stack
+    // since it is definitely a standalone coroutine (which coroutine
     // monopolizes it's share stack).
     aco_t* main_co = aco_create(NULL, NULL, 0, NULL, NULL);
-
-    // Create a share stack with the default size of 2MB and also with a 
+    printf("=====================================%d==\n", __LINE__);
+    // Create a share stack with the default size of 2MB and also with a
     // read-only guard page for the detection of stack overflow.
     aco_share_stack_t* sstk = aco_share_stack_new(0);
-
+    printf("=====================================%d==\n", __LINE__);
     int co_ct_arg_point_to_me = 0;
     // Create a non-main coroutine whose share stack is `sstk` and has a
-    // default 64 bytes size private save stack. The entry function of the 
-    // coroutine is `co_fp0`. Set `co->arg` to the address of the int 
+    // default 64 bytes size private save stack. The entry function of the
+    // coroutine is `co_fp0`. Set `co->arg` to the address of the int
     // variable `co_ct_arg_point_to_me`.
     aco_t* co = aco_create(main_co, sstk, 0, co_fp0, &co_ct_arg_point_to_me);
-
+    printf("=====================================%d==\n", __LINE__);
     int ct = 0;
     while(ct < 6){
         assert(co->is_end == 0);
         // Start or continue the execution of `co`. The caller of this function
         // must be main_co.
+        printf("=====================================%d==\n", __LINE__);
         aco_resume(co);
         // Check whether the co has completed the job it promised.
         assert(co_ct_arg_point_to_me == ct);
         printf("main_co:%p\n", main_co);
         ct++;
     }
+    printf("=====================================%d==\n", __LINE__);
     aco_resume(co);
     assert(co_ct_arg_point_to_me == ct);
-    // The value of `co->is_end` must be `1` now since it just suspended 
+    // The value of `co->is_end` must be `1` now since it just suspended
     // itself by calling `aco_exit()`.
     assert(co->is_end);
 
@@ -98,12 +100,15 @@ int main() {
 
     // Destroy co and its private save stack.
     aco_destroy(co);
+    printf("=====================================%d==\n", __LINE__);
     co = NULL;
     // Destroy the share stack sstk.
     aco_share_stack_destroy(sstk);
+    printf("=====================================%d==\n", __LINE__);
     sstk = NULL;
     // Destroy the main_co.
     aco_destroy(main_co);
+    printf("=====================================%d==\n", __LINE__);
     main_co = NULL;
 
     return 0;

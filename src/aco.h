@@ -36,19 +36,56 @@ extern "C" {
 #define ACO_VERSION_MINOR 2
 #define ACO_VERSION_PATCH 4
 
+/* register slot layout (logical slots used by C code and by acosw.S)
+ *
+ * We choose a simple, explicit slot mapping that must match acosw.S:
+ *
+ * slot 0 : RETADDR  (return address / function entry)
+ * slot 1 : SP       (stack pointer saved)
+ * slot 2..11 : callee-saved general regs (x19..x28 on AArch64)
+ * slot 12 : BP      (frame pointer / x29 on AArch64)
+ * slot 13 : LR      (link register store, may be redundant)
+ * slot 14 : FPU slot (used to store pointer to FPU control data if needed)
+ *
+ * The C code only references RETADDR, SP, BP and FPU slots directly, so
+ * make sure acosw.S stores/restores values into/from the same slots.
+ */
+
 #ifdef __i386__
     #define ACO_REG_IDX_RETADDR 0
     #define ACO_REG_IDX_SP 1
     #define ACO_REG_IDX_BP 2
+    /* x86 i386 uses two slots for FPU control (fpucw/mxcsr) */
     #define ACO_REG_IDX_FPU 6
-#elif __x86_64__
+#elif defined(__x86_64__)
+    /* Keep original x86_64 layout (matches original acosw.S) */
     #define ACO_REG_IDX_RETADDR 4
     #define ACO_REG_IDX_SP 5
     #define ACO_REG_IDX_BP 7
     #define ACO_REG_IDX_FPU 8
+#elif defined(__aarch64__)
+    /* AArch64 mapping ¡ª must match offsets used in your AArch64 acosw.S:
+     *
+     * In the provided AArch64 acosw.S example we used:
+     *   str lr, [x0, #0]        -> slot 0 = RETADDR (stored LR)
+     *   str sp, [x0, #8]        -> slot 1 = SP
+     *   stp x19,x20, [x0,#16]   -> slot 2,3
+     *   ...
+     *   ldp x29, lr, [x0,#96]   -> slot 12 (x29), slot 13 (lr)
+     *
+     * Therefore define indices accordingly:
+     */
+    #define ACO_REG_IDX_RETADDR 0
+    #define ACO_REG_IDX_SP 1
+    /* frame pointer (BP) -> x29 slot */
+    #define ACO_REG_IDX_BP 12
+    /* FPU slot: C-side stores pointer to fp control/state if needed.
+       ARMv8 does not have x86 MXCSR; we keep a slot for compatibility. */
+    #define ACO_REG_IDX_FPU 14
 #else
     #error "platform no support yet"
 #endif
+
 
 typedef struct {
     void*  ptr;
@@ -87,21 +124,32 @@ typedef void (*aco_cofuncp_t)(void);
 
 struct aco_s{
     // cpu registers' state
-#ifdef __i386__
+#if defined(__i386__)
     #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
         void*  reg[6];
     #else
         void*  reg[8];
     #endif
-#elif __x86_64__
+#elif defined(__x86_64__)
     #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
         void*  reg[8];
     #else
         void*  reg[9];
     #endif
+#elif defined(__aarch64__)
+    /* AArch64: we need enough slots for the layout described above.
+     * Choose 16 slots to be safe (covers callee-saved regs + extras).
+     * If ACO_CONFIG_SHARE_FPU_MXCSR_ENV is defined we can shrink, but keep simple.
+     */
+    #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
+        void*  reg[15];
+    #else
+        void*  reg[16];
+    #endif
 #else
     #error "platform no support yet"
 #endif
+
     aco_t* main_co;
     void*  arg;
     char   is_end;
@@ -205,7 +253,7 @@ extern void aco_resume(aco_t* resume_co);
 
 extern void aco_destroy(aco_t* co);
 
-#define aco_is_main_co(co) ({((co)->main_co) == NULL;})
+#define aco_is_main_co(co) (((co)->main_co) == NULL)
 
 #define aco_exit1(co) do {     \
     (co)->is_end = 1;           \

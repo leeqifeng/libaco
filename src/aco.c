@@ -17,6 +17,7 @@
 #include "aco.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <assert.h>
 
 // this header including should be at the last of the `include` directives list
 #include "aco_assert_override.h"
@@ -27,6 +28,9 @@ void aco_runtime_test(void){
 #elif  __x86_64__
     _Static_assert(sizeof(void*) == 8, "require 'sizeof(void*) == 8'");
     _Static_assert(sizeof(__uint128_t) == 16, "require 'sizeof(__uint128_t) == 16'");
+#elif defined(__aarch64__)
+    _Static_assert(sizeof(void*) == 8, "require 'sizeof(void*) == 8'");
+
 #else
     #error "platform no support yet"
 #endif
@@ -173,6 +177,8 @@ static __thread aco_cofuncp_t aco_gtls_last_word_fp = aco_default_protector_last
     static __thread void* aco_gtls_fpucw_mxcsr[2];
 #elif  __x86_64__
     static __thread void* aco_gtls_fpucw_mxcsr[1];
+#elif defined(__aarch64__)
+    static __thread void* aco_gtls_fpucw_mxcsr[1];
 #else
     #error "platform no support yet"
 #endif
@@ -281,6 +287,14 @@ aco_share_stack_t* aco_share_stack_new2(size_t sz, char guard_page_enabled){
     *((void**)(p->align_retptr)) = (void*)(aco_funcp_protector_asm);
     assert(p->sz > (16 + (sizeof(void*) << 1) + sizeof(void*)));
     p->align_limit = p->sz - 16 - (sizeof(void*) << 1);
+#elif defined(__aarch64__)
+    // AArch64 采用下降栈，与 x86 栈布局兼容使用该逻辑
+    uintptr_t u_p = (uintptr_t)(p->sz - (sizeof(void*) << 1) + (uintptr_t)p->ptr);
+    u_p = (u_p >> 4) << 4;
+    p->align_highptr = (void*)u_p;
+    p->align_retptr  = (void*)(u_p - sizeof(void*));
+    *((void**)(p->align_retptr)) = (void*)(aco_funcp_protector_asm);
+    p->align_limit = p->sz - 16 - (sizeof(void*) << 1);
 #else
     #error "platform no support yet"
 #endif
@@ -331,6 +345,12 @@ aco_t* aco_create(
         #ifndef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
             p->reg[ACO_REG_IDX_FPU] = aco_gtls_fpucw_mxcsr[0];
         #endif
+#elif defined(__aarch64__)
+        p->reg[ACO_REG_IDX_RETADDR] = (void*)fp;
+        p->reg[ACO_REG_IDX_SP] = p->share_stack->align_retptr;
+        #ifndef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
+            p->reg[ACO_REG_IDX_FPU] = aco_gtls_fpucw_mxcsr[0];
+        #endif
 #else
         #error "platform no support yet"
 #endif
@@ -343,7 +363,7 @@ aco_t* aco_create(
         p->save_stack.ptr = malloc(save_stack_sz);
         assertalloc_ptr(p->save_stack.ptr);
         p->save_stack.sz = save_stack_sz;
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
         p->save_stack.valid_sz = 0;
 #else
         #error "platform no support yet"
@@ -369,7 +389,8 @@ void aco_resume(aco_t* resume_co){
         if(resume_co->share_stack->owner != NULL){
             aco_t* owner_co = resume_co->share_stack->owner;
             assert(owner_co->share_stack == resume_co->share_stack);
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+            /* 这一段用于计算 owner_co 需要保存到 heap 的栈区大小，并执行保存 */
             assert(
                 (
                     (uintptr_t)(owner_co->share_stack->align_retptr)
@@ -405,6 +426,7 @@ void aco_resume(aco_t* resume_co){
             // TODO: optimize the performance penalty of memcpy function call
             //   for very short memory span
             if(owner_co->save_stack.valid_sz > 0) {
+                /* 在 x86_64 上原来的优化仅对 x86_64 有效，AArch64 使用普通 memcpy */
     #ifdef __x86_64__
                 aco_amd64_optimized_memcpy_drop_in(
                     owner_co->save_stack.ptr,
@@ -430,7 +452,8 @@ void aco_resume(aco_t* resume_co){
 #endif
         }
         assert(resume_co->share_stack->owner == NULL);
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+        /* 这一段用于把 resume_co 的保存区内容恢复到共享栈上 */
         assert(
             resume_co->save_stack.valid_sz
             <=
@@ -472,7 +495,9 @@ void aco_resume(aco_t* resume_co){
 #endif
     }
     aco_gtls_co = resume_co;
+    printf("=====================================%d==\n", __LINE__);
     acosw(resume_co->main_co, resume_co);
+    printf("=====================================%d==\n", __LINE__);
     aco_gtls_co = resume_co->main_co;
 }
 

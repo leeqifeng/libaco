@@ -128,10 +128,12 @@ void benchmark_copystack(size_t co_amount,size_t stksz, size_t loopct){
     fflush(stdout);
     // warm-up
     ct = 0;
+    printf("=====================================%d==\n", __LINE__);
     while(ct < co_amount){
         aco_resume(coarray[ct]);
         ct++;
     }
+    printf("=====================================%d==\n", __LINE__);
     // copystack ctxsw
     assert(0 == clock_gettime(CLOCK_MONOTONIC, &tstart));
     size_t glct = 0;
@@ -143,6 +145,7 @@ void benchmark_copystack(size_t co_amount,size_t stksz, size_t loopct){
             glct++;
         }
     }
+    printf("=====================================%d==\n", __LINE__);
     assert(0 == clock_gettime(CLOCK_MONOTONIC, &tend));    
     delta_t = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) -
         ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
@@ -152,6 +155,7 @@ void benchmark_copystack(size_t co_amount,size_t stksz, size_t loopct){
         "aco_resume/co_amount=%zu/copy_stack_size=%zuB",
         co_amount, coarray[0]->save_stack.max_cpsz
     );
+
     assert(print_sz > 0 && print_sz < PRINT_BUF_SZ);
     printf("%-50s %11zu %9.3f s %11.2f ns/op %13.2f op/s\n",
         gl_benchmark_print_str_buf, glct, 

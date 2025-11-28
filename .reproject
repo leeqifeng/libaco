@@ -6,5 +6,18 @@
         <OutputPath Name="Debug" Path="Debug" TreeNode="Debug"/>
         <OutputPath Name="Release" Path="Release" TreeNode="Release"/>
     </OutputSetting>
-    <BuildSetting CoustomCfgMakefile="false" NeedReBuild="false" NotScanSourceFile="false"/>
+    <BuildSetting CoustomCfgMakefile="false" NeedReBuild="false" NotScanSourceFile="true"/>
+    <UploadPath>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_benchmark" value="/apps/acotest/test_aco_benchmark"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_synopsis" value="/apps/acotest/test_aco_synopsis"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_0" value="/apps/acotest/test_aco_tutorial_0"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_1" value="/apps/acotest/test_aco_tutorial_1"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_2" value="/apps/acotest/test_aco_tutorial_2"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_3" value="/apps/acotest/test_aco_tutorial_3"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_4" value="/apps/acotest/test_aco_tutorial_4"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_5" value="/apps/acotest/test_aco_tutorial_5"/>
+        <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_6" value="/apps/acotest/test_aco_tutorial_6"/>
+    </UploadPath>
+    <DeviceSetting DevName="172.100.1.254" WorkDir=""/>
+    <ExtDevNames/>
 </SylixOSSetting>
