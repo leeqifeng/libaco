@@ -75,13 +75,31 @@ extern "C" {
      *
      * Therefore define indices accordingly:
      */
-    #define ACO_REG_IDX_RETADDR 0
-    #define ACO_REG_IDX_SP 1
-    /* frame pointer (BP) -> x29 slot */
-    #define ACO_REG_IDX_BP 12
-    /* FPU slot: C-side stores pointer to fp control/state if needed.
-       ARMv8 does not have x86 MXCSR; we keep a slot for compatibility. */
-    #define ACO_REG_IDX_FPU 14
+
+#define ACO_REG_IDX_RETADDR   0   // slot 0 : x30 (LR)
+#define ACO_REG_IDX_SP        1   // slot 1 : SP
+#define ACO_REG_IDX_X19       2   // slot 2
+#define ACO_REG_IDX_X20       3   // slot 3
+#define ACO_REG_IDX_X21       4   // slot 4
+#define ACO_REG_IDX_X22       5   // slot 5
+#define ACO_REG_IDX_X23       6   // slot 6
+#define ACO_REG_IDX_X24       7   // slot 7
+#define ACO_REG_IDX_X25       8   // slot 8
+#define ACO_REG_IDX_X26       9   // slot 9
+#define ACO_REG_IDX_X27       10  // slot 10
+#define ACO_REG_IDX_X28       11  // slot 11
+
+#define ACO_REG_IDX_BP        12  // slot 12 : x29 (FP)
+#define ACO_REG_IDX_LR        13  // slot 13 : x30 (LR)
+
+#define ACO_REG_IDX_FPU_D8    14  // slot 14 : d8
+#define ACO_REG_IDX_FPU_D9    15  // slot 15 : d9
+#define ACO_REG_IDX_FPU_D10   16  // slot 16
+#define ACO_REG_IDX_FPU_D11   17  // slot 17
+#define ACO_REG_IDX_FPU_D12   18  // slot 18
+#define ACO_REG_IDX_FPU_D13   19  // slot 19
+#define ACO_REG_IDX_FPU_D14   20  // slot 20
+#define ACO_REG_IDX_FPU_D15   21  // slot 21
 #else
     #error "platform no support yet"
 #endif
@@ -141,11 +159,12 @@ struct aco_s{
      * Choose 16 slots to be safe (covers callee-saved regs + extras).
      * If ACO_CONFIG_SHARE_FPU_MXCSR_ENV is defined we can shrink, but keep simple.
      */
-    #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
-        void*  reg[15];
-    #else
-        void*  reg[16];
-    #endif
+//    #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
+//        void*  reg[15];
+//    #else
+//        void*  reg[22];
+//    #endif
+    void* reg[32];   // 至少 28，32 更安全并方便对齐
 #else
     #error "platform no support yet"
 #endif

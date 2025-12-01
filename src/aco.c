@@ -19,6 +19,9 @@
 #include <stdint.h>
 #include <assert.h>
 
+#include <inttypes.h>
+#include <stddef.h>
+
 // this header including should be at the last of the `include` directives list
 #include "aco_assert_override.h"
 
@@ -349,8 +352,15 @@ aco_t* aco_create(
         p->reg[ACO_REG_IDX_RETADDR] = (void*)fp;
         p->reg[ACO_REG_IDX_SP] = p->share_stack->align_retptr;
         #ifndef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
-            p->reg[ACO_REG_IDX_FPU] = aco_gtls_fpucw_mxcsr[0];
+//            p->reg[ACO_REG_IDX_FPU] = aco_gtls_fpucw_mxcsr[0];
         #endif
+        /* <<< 修复：初始化 BP/LR 槽（slot12 = BP, slot13 = LR） */
+        /* 把 LR（slot13）也设置为 entry fp，这样 acosw 恢复后 x30 不会是 0 */
+        p->reg[ACO_REG_IDX_BP] = (void*)0;               /* x29 可先设为 0 */
+        p->reg[ACO_REG_IDX_LR] = (void*)fp;          /* x30 (LR) = fp */
+        /* clear FP slots */
+        for (int i = ACO_REG_IDX_FPU_D8; i <= ACO_REG_IDX_FPU_D15; ++i)
+            p->reg[i] = (void*)0;
 #else
         #error "platform no support yet"
 #endif
@@ -495,9 +505,7 @@ void aco_resume(aco_t* resume_co){
 #endif
     }
     aco_gtls_co = resume_co;
-    printf("=====================================%d==\n", __LINE__);
     acosw(resume_co->main_co, resume_co);
-    printf("=====================================%d==\n", __LINE__);
     aco_gtls_co = resume_co->main_co;
 }
 
