@@ -268,10 +268,10 @@ aco_funcp_protector_asm:
     // but ensure it for safety)
 
 	/*
-	 *   SP ÒÑ¾­°´ ABI ¶ÔÆë,ÎÞÐè²Ù×÷
-	 *   ÈÔÐè²Ù×÷ÐèÒª´ò¿ªÏÂÃæ´úÂë
+	 *   SP å·²ç»æŒ‰ ABI å¯¹é½,æ— éœ€æ“ä½œ
+	 *   ä»éœ€æ“ä½œéœ€è¦æ‰“å¼€ä¸‹é¢ä»£ç 
 	 *	 mov x2, sp
-	 *	 bic x2, x2, #0xf  // ÇåµÍ 4 Î»£¬ºÏ·¨Âß¼­Á¢¼´Êý
+	 *	 bic x2, x2, #0xf  // æ¸…ä½Ž 4 ä½ï¼Œåˆæ³•é€»è¾‘ç«‹å³æ•°
 	 *   mov sp, x2
 	 */
 

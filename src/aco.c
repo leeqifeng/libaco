@@ -291,7 +291,7 @@ aco_share_stack_t* aco_share_stack_new2(size_t sz, char guard_page_enabled){
     assert(p->sz > (16 + (sizeof(void*) << 1) + sizeof(void*)));
     p->align_limit = p->sz - 16 - (sizeof(void*) << 1);
 #elif defined(__aarch64__)
-    // AArch64 ≤…”√œ¬Ωµ’ª£¨”Î x86 ’ª≤ºæ÷ºÊ»› π”√∏√¬ﬂº≠
+    // AArch64 ÈááÁî®‰∏ãÈôçÊ†àÔºå‰∏é x86 Ê†àÂ∏ÉÂ±ÄÂÖºÂÆπ‰ΩøÁî®ËØ•ÈÄªËæë
     uintptr_t u_p = (uintptr_t)(p->sz - (sizeof(void*) << 1) + (uintptr_t)p->ptr);
     u_p = (u_p >> 4) << 4;
     p->align_highptr = (void*)u_p;
@@ -354,9 +354,9 @@ aco_t* aco_create(
         #ifndef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
 //            p->reg[ACO_REG_IDX_FPU] = aco_gtls_fpucw_mxcsr[0];
         #endif
-        /* <<< –ﬁ∏¥£∫≥ı ºªØ BP/LR ≤€£®slot12 = BP, slot13 = LR£© */
-        /* ∞— LR£®slot13£©“≤…Ë÷√Œ™ entry fp£¨’‚—˘ acosw ª÷∏¥∫Û x30 ≤ªª· « 0 */
-        p->reg[ACO_REG_IDX_BP] = (void*)0;               /* x29 ø…œ»…ËŒ™ 0 */
+        /* <<< ‰øÆÂ§çÔºöÂàùÂßãÂåñ BP/LR ÊßΩÔºàslot12 = BP, slot13 = LRÔºâ */
+        /* Êää LRÔºàslot13Ôºâ‰πüËÆæÁΩÆ‰∏∫ entry fpÔºåËøôÊ†∑ acosw ÊÅ¢Â§çÂêé x30 ‰∏ç‰ºöÊòØ 0 */
+        p->reg[ACO_REG_IDX_BP] = (void*)0;               /* x29 ÂèØÂÖàËÆæ‰∏∫ 0 */
         p->reg[ACO_REG_IDX_LR] = (void*)fp;          /* x30 (LR) = fp */
         /* clear FP slots */
         for (int i = ACO_REG_IDX_FPU_D8; i <= ACO_REG_IDX_FPU_D15; ++i)
@@ -400,7 +400,7 @@ void aco_resume(aco_t* resume_co){
             aco_t* owner_co = resume_co->share_stack->owner;
             assert(owner_co->share_stack == resume_co->share_stack);
 #if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
-            /* ’‚“ª∂Œ”√”⁄º∆À„ owner_co –Ë“™±£¥ÊµΩ heap µƒ’ª«¯¥Û–°£¨≤¢÷¥––±£¥Ê */
+            /* Ëøô‰∏ÄÊÆµÁî®‰∫éËÆ°ÁÆó owner_co ÈúÄË¶Å‰øùÂ≠òÂà∞ heap ÁöÑÊ†àÂå∫Â§ßÂ∞èÔºåÂπ∂ÊâßË°å‰øùÂ≠ò */
             assert(
                 (
                     (uintptr_t)(owner_co->share_stack->align_retptr)
@@ -436,7 +436,7 @@ void aco_resume(aco_t* resume_co){
             // TODO: optimize the performance penalty of memcpy function call
             //   for very short memory span
             if(owner_co->save_stack.valid_sz > 0) {
-                /* ‘⁄ x86_64 …œ‘≠¿¥µƒ”≈ªØΩˆ∂‘ x86_64 ”––ß£¨AArch64  π”√∆’Õ® memcpy */
+                /* Âú® x86_64 ‰∏äÂéüÊù•ÁöÑ‰ºòÂåñ‰ªÖÂØπ x86_64 ÊúâÊïàÔºåAArch64 ‰ΩøÁî®ÊôÆÈÄö memcpy */
     #ifdef __x86_64__
                 aco_amd64_optimized_memcpy_drop_in(
                     owner_co->save_stack.ptr,
@@ -463,7 +463,7 @@ void aco_resume(aco_t* resume_co){
         }
         assert(resume_co->share_stack->owner == NULL);
 #if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
-        /* ’‚“ª∂Œ”√”⁄∞— resume_co µƒ±£¥Ê«¯ƒ⁄»›ª÷∏¥µΩπ≤œÌ’ª…œ */
+        /* Ëøô‰∏ÄÊÆµÁî®‰∫éÊää resume_co ÁöÑ‰øùÂ≠òÂå∫ÂÜÖÂÆπÊÅ¢Â§çÂà∞ÂÖ±‰∫´Ê†à‰∏ä */
         assert(
             resume_co->save_stack.valid_sz
             <=
