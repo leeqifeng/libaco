@@ -214,6 +214,8 @@ int main() {
     printf("+build:i386\n");
 #elif __x86_64__
     printf("+build:x86_64\n");
+#elif __aarch64__
+    printf("+build:aarch64\n");
 #endif
 
 #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
