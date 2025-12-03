@@ -1,14 +1,6 @@
 .text
-#if defined(__aarch64__)
-    .arch armv8-a
-#elif defined(__arm__)
-    .arch armv7-a
-    .syntax unified
-#endif
 .globl acosw
 #if defined(__APPLE__)
-#elif defined(__arm__) || defined(__aarch64__)
-.type  acosw, %function
 #else
 .type  acosw, @function
 #endif
@@ -128,65 +120,58 @@ acosw:
 #endif
     mov     rsp,rcx
     jmp     rax
-
-/* AArch64 implementation */
 #elif defined(__aarch64__)
+/*
+    aarch64 ABI:
+    - Callee-saved registers: x19-x28, x29(fp), x30(lr)
+    - Callee-saved FPU registers: d8-d15
+    - Stack pointer: sp (must be 16-byte aligned)
+    - Arguments: x0 = from_co, x1 = to_co
 
-    // from_co -> x0, to_co -> x1
-    // Layout (bytes):
-    // 0:  RETADDR (stored LR)
-    // 8:  SP
-    // 16..80: callee-saved x19..x28 (8 bytes each)
-    // 96: x29 (FP) and x30 (LR) stored via stp at #96
-    // 112..160: SIMD d8..d15 (16 bytes pairs stored via stp dX,dY)
+    reg layout in aco_t:
+    x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29(fp) x30(lr) sp d8 d9 d10 d11 d12 d13 d14 d15
+    0   8   16  24  32  40  48  56  64  72  80      88      96 104 112 120 128 136 144 152
+*/
+    // x0 = from_co, x1 = to_co
 
-    // save LR into from_co[0]
-    str     x30, [x0, #0]        // RETADDR slot (slot 0)
-    // save SP into from_co[1]
+    // Save callee-saved registers to from_co
+    stp     x19, x20, [x0, #0]
+    stp     x21, x22, [x0, #16]
+    stp     x23, x24, [x0, #32]
+    stp     x25, x26, [x0, #48]
+    stp     x27, x28, [x0, #64]
+    stp     x29, x30, [x0, #80]      // fp and lr
     mov     x2, sp
-    str     x2, [x0, #8]         // SP slot (slot 1)
-
-    // save callee-saved registers x19..x28 into from_co slots
-    stp     x19, x20, [x0, #16]
-    stp     x21, x22, [x0, #32]
-    stp     x23, x24, [x0, #48]
-    stp     x25, x26, [x0, #64]
-    stp     x27, x28, [x0, #80]
-
-    // save FP (x29) and LR (x30) pair at offset 96
-    stp     x29, x30, [x0, #96]
+    str     x2, [x0, #96]           // sp
 
 #ifndef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
-    // save FP/SIMD d8..d15 (each is 8 bytes, store as pairs)
-    stp     d8,  d9,  [x0, #112]
-    stp     d10, d11, [x0, #128]
-    stp     d12, d13, [x0, #144]
-    stp     d14, d15, [x0, #160]
+    // Save FPU callee-saved registers d8-d15
+    stp     d8, d9, [x0, #104]
+    stp     d10, d11, [x0, #120]
+    stp     d12, d13, [x0, #136]
+    stp     d14, d15, [x0, #152]
 #endif
 
-    // restore registers from to_co (x1)
-    ldr     x30, [x1, #0]        // restore RETADDR -> LR
-    ldr     x2,  [x1, #8]        // restore SP
+    // Restore callee-saved registers from to_co
+    ldp     x19, x20, [x1, #0]
+    ldp     x21, x22, [x1, #16]
+    ldp     x23, x24, [x1, #32]
+    ldp     x25, x26, [x1, #48]
+    ldp     x27, x28, [x1, #64]
+    ldp     x29, x30, [x1, #80]      // fp and lr
+    ldr     x2, [x1, #96]           // sp
     mov     sp, x2
 
-    ldp     x19, x20, [x1, #16]
-    ldp     x21, x22, [x1, #32]
-    ldp     x23, x24, [x1, #48]
-    ldp     x25, x26, [x1, #64]
-    ldp     x27, x28, [x1, #80]
-
-    ldp     x29, x30, [x1, #96]
-
 #ifndef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
-    ldp     d8,  d9,  [x1, #112]
-    ldp     d10, d11, [x1, #128]
-    ldp     d12, d13, [x1, #144]
-    ldp     d14, d15, [x1, #160]
+    // Restore FPU callee-saved registers d8-d15
+    ldp     d8, d9, [x1, #104]
+    ldp     d10, d11, [x1, #120]
+    ldp     d12, d13, [x1, #136]
+    ldp     d14, d15, [x1, #152]
 #endif
 
-    // return to LR (which now holds to_co's saved RETADDR)
+    // Return to the new coroutine (x30/lr contains return address)
     ret
-
 #else
     #error "platform not support"
 #endif
@@ -203,14 +188,19 @@ aco_save_fpucw_mxcsr:
 #ifdef __i386__
     mov     eax,DWORD PTR [esp+0x4]     // ptr
     fnstcw  WORD PTR  [eax]
-    stmxcsr DWORD PTR [eax+0x4] 
+    stmxcsr DWORD PTR [eax+0x4]
     ret
 #elif __x86_64__
     fnstcw  WORD PTR  [rdi]
     stmxcsr DWORD PTR [rdi+0x4]
     ret
 #elif defined(__aarch64__)
-    // ARM64: no MXCSR; make this a no-op (matches aco.h stub expectation)
+    // aarch64: save d8-d15 FPU callee-saved registers
+    // x0 = ptr (array of 8 void* to store d8-d15)
+    stp     d8, d9, [x0, #0]
+    stp     d10, d11, [x0, #16]
+    stp     d12, d13, [x0, #32]
+    stp     d14, d15, [x0, #48]
     ret
 #else
     #error "platform not support"
@@ -264,22 +254,23 @@ aco_funcp_protector_asm:
     #endif
             ret
 #elif defined(__aarch64__)
-    // align SP to 16 bytes (SP must already be 16-bytes aligned per ABI,
-    // but ensure it for safety)
-
-	/*
-	 *   SP 已经按 ABI 对齐,无需操作
-	 *   仍需操作需要打开下面代码
-	 *	 mov x2, sp
-	 *	 bic x2, x2, #0xf  // 清低 4 位，合法逻辑立即数
-	 *   mov sp, x2
-	 */
-
-    // call protector and abort
-    // Use BL (branch with link)
-    bl      aco_funcp_protector
-    bl      abort
-    ret
+            // Align stack to 16 bytes (cannot use AND directly on sp)
+            mov     x9, sp
+            and     x9, x9, #~0xf
+            mov     sp, x9
+    #if defined(__APPLE__)
+            bl      _aco_funcp_protector
+            bl      _abort
+    #else
+        #if defined(__pic__) || defined(__PIC__)
+            bl      aco_funcp_protector
+            bl      abort
+        #else
+            bl      aco_funcp_protector
+            bl      abort
+        #endif
+    #endif
+            ret
 #else
     #error "platform not support"
 #endif

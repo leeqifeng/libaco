@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="GB2312" standalone="no"?>
 <SylixOSSetting>
-    <BaseSetting Profile="standard" ProjectType="SylixOSSlibProject" RealEvoVer="6.5.0 Ultimate" TlsVersion="default"/>
+    <BaseSetting Profile="standard" ProjectType="SylixOSSlibProject" RealEvoVer="6.5.0 Ultimate" TlsVersion="SylixOS_COM_LTS_3.6.5"/>
     <OutputSetting>
         <OutputPath Name="Output" Path="Release:Debug" TreeNode="Output"/>
         <OutputPath Name="Debug" Path="Debug" TreeNode="Debug"/>
@@ -18,6 +18,6 @@
         <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_5" value="/apps/acotest/test_aco_tutorial_5"/>
         <PairItem key="$(WORKSPACE_libaco)/$(Output)/strip/acotest/src/test_aco_tutorial_6" value="/apps/acotest/test_aco_tutorial_6"/>
     </UploadPath>
-    <DeviceSetting DevName="172.100.1.254" WorkDir=""/>
+    <DeviceSetting DevName="10.4.0.92" WorkDir=""/>
     <ExtDevNames/>
 </SylixOSSetting>

@@ -41,41 +41,19 @@ extern "C" {
     #define ACO_REG_IDX_SP 1
     #define ACO_REG_IDX_BP 2
     #define ACO_REG_IDX_FPU 6
-#elif defined(__x86_64__)
+#elif __x86_64__
     #define ACO_REG_IDX_RETADDR 4
     #define ACO_REG_IDX_SP 5
     #define ACO_REG_IDX_BP 7
     #define ACO_REG_IDX_FPU 8
 #elif defined(__aarch64__)
-
-#define ACO_REG_IDX_RETADDR   0   // slot 0 : x30 (LR)
-#define ACO_REG_IDX_SP        1   // slot 1 : SP
-#define ACO_REG_IDX_X19       2   // slot 2
-#define ACO_REG_IDX_X20       3   // slot 3
-#define ACO_REG_IDX_X21       4   // slot 4
-#define ACO_REG_IDX_X22       5   // slot 5
-#define ACO_REG_IDX_X23       6   // slot 6
-#define ACO_REG_IDX_X24       7   // slot 7
-#define ACO_REG_IDX_X25       8   // slot 8
-#define ACO_REG_IDX_X26       9   // slot 9
-#define ACO_REG_IDX_X27       10  // slot 10
-#define ACO_REG_IDX_X28       11  // slot 11
-
-#define ACO_REG_IDX_BP        12  // slot 12 : x29 (FP)
-#define ACO_REG_IDX_LR        13  // slot 13 : x30 (LR)
-
-#define ACO_REG_IDX_FPU_D8    14  // slot 14 : d8
-#define ACO_REG_IDX_FPU_D9    15  // slot 15 : d9
-#define ACO_REG_IDX_FPU_D10   16  // slot 16
-#define ACO_REG_IDX_FPU_D11   17  // slot 17
-#define ACO_REG_IDX_FPU_D12   18  // slot 18
-#define ACO_REG_IDX_FPU_D13   19  // slot 19
-#define ACO_REG_IDX_FPU_D14   20  // slot 20
-#define ACO_REG_IDX_FPU_D15   21  // slot 21
+    #define ACO_REG_IDX_RETADDR 11  
+    #define ACO_REG_IDX_SP      12  
+    #define ACO_REG_IDX_BP      10  
+    #define ACO_REG_IDX_FPU     13  
 #else
     #error "platform no support yet"
 #endif
-
 
 typedef struct {
     void*  ptr;
@@ -114,13 +92,13 @@ typedef void (*aco_cofuncp_t)(void);
 
 struct aco_s{
     // cpu registers' state
-#if defined(__i386__)
+#ifdef __i386__
     #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
         void*  reg[6];
     #else
         void*  reg[8];
     #endif
-#elif defined(__x86_64__)
+#elif __x86_64__
     #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
         void*  reg[8];
     #else
@@ -128,9 +106,9 @@ struct aco_s{
     #endif
 #elif defined(__aarch64__)
     #ifdef ACO_CONFIG_SHARE_FPU_MXCSR_ENV
-        void*  reg[14]; 
+        void*  reg[13];
     #else
-        void*  reg[22];
+        void*  reg[21];
     #endif
 #else
     #error "platform no support yet"
@@ -238,7 +216,7 @@ extern void aco_resume(aco_t* resume_co);
 
 extern void aco_destroy(aco_t* co);
 
-#define aco_is_main_co(co) (((co)->main_co) == NULL)
+#define aco_is_main_co(co) ({((co)->main_co) == NULL;})
 
 #define aco_exit1(co) do {     \
     (co)->is_end = 1;           \
